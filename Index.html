@@ -58,12 +58,9 @@ if (window.hljs && document.readyState && document.readyState === "complete") {
 </div>
 
 
-<pre class="r"><code># Libraries
-library(caret)</code></pre>
 <pre><code>## Warning: package 'caret' was built under R version 3.1.2</code></pre>
 <pre><code>## Loading required package: lattice
 ## Loading required package: ggplot2</code></pre>
-<pre class="r"><code>library(randomForest)</code></pre>
 <pre><code>## Warning: package 'randomForest' was built under R version 3.1.2</code></pre>
 <pre><code>## randomForest 4.6-10
 ## Type rfNews() to see new features/changes/bug fixes.</code></pre>
@@ -73,7 +70,8 @@ library(caret)</code></pre>
 </div>
 <div id="data" class="section level3">
 <h3>Data</h3>
-<p>The training data for this project are available here: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv</a> The test data are available here: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv</a></p>
+<p>The training data for this project are available here: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv</a></p>
+<p>The test data are available here: <a href="https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv">https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv</a></p>
 <p>The data for this project come from this source: <a href="http://groupware.les.inf.puc-rio.br/har">http://groupware.les.inf.puc-rio.br/har</a>. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment.</p>
 </div>
 <div id="what-you-should-submit" class="section level3">
@@ -180,7 +178,7 @@ dim(trainTransformed)</code></pre>
 </div>
 <div id="random-forest-classification" class="section level3">
 <h3>Random Forest Classification</h3>
-<p>Our analysis and model building will proceed using the new PCA transformed training data set. We will now apply a Random Forest model on our data set</p>
+<p>Our analysis and model building will proceed using the new PCA transformed training data set. We will now apply a Random Forest model on our data set. This will create a random forest prediction method, which will be our model for our tests.</p>
 <pre class="r"><code># Random Forest
 
 modelFit &lt;- randomForest(trainTransformed,training$classe, do.trace = FALSE)
@@ -188,7 +186,8 @@ modelFit</code></pre>
 </div>
 <div id="confusion-matrix" class="section level3">
 <h3>Confusion Matrix</h3>
-<pre class="r"><code>##Accuracy 
+<p>We will now put out prediction model to the semi-final test, to see how well we can predict the <code>classe</code> variable in the <code>testing</code> data set</p>
+<pre class="r"><code>##Confusion Matrix 
 predicts&lt;-predict(modelFit,testTransformed)
 confusionMatrix(testing$classe,predicts)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
@@ -225,12 +224,14 @@ confusionMatrix(testing$classe,predicts)</code></pre>
 </div>
 <div id="accuracy-metrics" class="section level3">
 <h3>Accuracy Metrics</h3>
-<pre class="r"><code># loading the data
-data&lt;-read.csv(&quot;./data/train.csv&quot;, , na.strings = c(&quot;NA&quot;, &quot;&quot;))
-final_test&lt;-read.csv(&quot;./data/test.csv&quot;, na.strings = c(&quot;NA&quot;, &quot;&quot;))</code></pre>
+<p>As shown in the above output chunk, our model has pretty good predictive accuracy of the <code>classe</code> variable. The accuracy is 97.84%, so subsequently the out of sample error is expected to be -96.84%</p>
+</div>
+<div id="accuracy-metrics-1" class="section level3">
+<h3>Accuracy Metrics</h3>
 </div>
 <div id="submission-of-predictions" class="section level3">
 <h3>Submission of predictions</h3>
+<p>The moment of truth for our model is the final tests. Belo is the code for preparing the <code>final test</code> data set for entering the prediction function, remember we had some cleaning done to the training data set as well as the Principal Components Transformations. When this processing is done, the <code>final_final_test</code> data frame is inputted in the prediction fuction, a vector of predictions is created, and then the vector is inputted to the custom built function for the Coursera Project Submission.</p>
 <pre class="r"><code>###################################
 #######  Submission  ##############
 ###################################
@@ -259,6 +260,7 @@ pml_write_files = function(x){
 submission</code></pre>
 <pre><code>##  [1] &quot;B&quot; &quot;A&quot; &quot;B&quot; &quot;A&quot; &quot;A&quot; &quot;E&quot; &quot;D&quot; &quot;B&quot; &quot;A&quot; &quot;A&quot; &quot;A&quot; &quot;C&quot; &quot;B&quot; &quot;A&quot; &quot;E&quot; &quot;E&quot; &quot;A&quot;
 ## [18] &quot;B&quot; &quot;B&quot; &quot;B&quot;</code></pre>
+<p>Coursera feedback showed 95% success in the predictions (19/20). Well done to us!</p>
 </div>
 
 

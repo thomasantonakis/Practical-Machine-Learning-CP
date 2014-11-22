@@ -43,7 +43,7 @@ Due to security concerns with the exchange of R code, your code will not be run 
 We first of all download the data from the given links and store the files to a local folder. There are two files to download, one for the training data set and the testing data set. We will download both, but will only use the training data set for the model building, and the testing data set is only used during the submission phase.  
 
 
-```{r downloading, cache=TRUE}
+```{r downloading, cache=FALSE}
 # Downloading the data
 if(!file.exists("data")){
         dir.create("data")
@@ -63,7 +63,7 @@ dateDownloaded<-date()
 
 We load the two downloaded files in an R session, using the parameter `na.strings` in order to tell R to treat cells in the data frame that are empty or contain the string `NA` as missing values.
 
-```{r loading, cache=TRUE}
+```{r loading, cache=FALSE}
 # loading the data
 data<-read.csv("./data/train.csv", , na.strings = c("NA", ""))
 final_test<-read.csv("./data/test.csv", na.strings = c("NA", ""))
@@ -88,7 +88,7 @@ summary(data$classe)
 
 Our analysis will be based on the `data` data set, so we will split this data set into a training set and a testing set for the model building purposes. The training set will be used for training a model based on our analysis in the following steps, and then this given model will be tested using the testing set from the initial  `data` set . This will be our cross-validation method, we will use 70 of the `data` set for training and the rest 30% for testing the model created.
 
-```{r crossvalidation, cache=TRUE}
+```{r crossvalidation, cache=FALSE}
 # Cross Validation
 set.seed(0)
 inTrain = createDataPartition(y=data$classe, p=0.7, list=FALSE)
@@ -124,7 +124,7 @@ dim(training)
 
 The last piece of output showed that after the cleaning procedure, there are still `r dim(training)[2]` variables  in the `training` dataframe, which is still too many. We will "preprocess" the data frame using the Prncipal components analysis, as we desperately need the dimensions of the problem to be reduced. We will set the threshold to be 95%, as we do not want to lose more than 5% of the information.
 
-```{r pca, cache=TRUE}
+```{r pca, cache=FALSE}
 # Principal COmponents
 preProc <- preProcess(training[,-53],method="pca",thresh = 0.95)
 preProc
@@ -133,7 +133,7 @@ The procedure of the Principal Coponents finds correllations among the variables
 
 We will now impelent the PCA results to our data set, and replace the old variables with the new components, using the following code.
 
-```{r pca implementation, cache=TRUE}
+```{r pca implementation, cache=FALSE}
 # Forget about initial variables, we now use the Principal Components. (25)
 trainTransformed <- predict(preProc, training[,-53])
 testTransformed <- predict(preProc, testing[,-53])
@@ -156,7 +156,7 @@ modelFit
 
 We will now put out prediction model to the  semi-final test, to see how well we can predict the `classe` variable in the `testing` data set 
 
-```{r confusion matrx, cache=TRUE}
+```{r confusion matrx, cache=FALSE}
 ##Confusion Matrix 
 predicts<-predict(modelFit,testTransformed)
 confusionMatrix(testing$classe,predicts)
@@ -173,7 +173,7 @@ As shown in the above output chunk, our model has pretty good predictive accurac
 
 The moment of truth for our model is the final tests. Belo is the code for preparing the `final test` data set for entering the prediction function, remember we had some cleaning done to the training data set as well as the Principal Components Transformations. When this processing is done,  the `final_final_test` data frame is inputted in the prediction fuction, a vector of predictions is created, and then the vector is inputted to the custom built function for the Coursera Project Submission. 
 
-```{r submission, cache=TRUE}
+```{r submission, cache=FALSE}
 ###################################
 #######  Submission  ##############
 ###################################
