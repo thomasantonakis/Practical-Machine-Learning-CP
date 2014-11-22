@@ -4,19 +4,201 @@ author: "Thomas Antonakis"
 date: "Thursday, November 20, 2014"
 output: html_document
 ---
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r}
-summary(cars)
+```{r libraries, cache=FALSE, echo=FALSE, results='hide'}
+# Libraries
+library(caret)
+library(randomForest)
 ```
 
-You can also embed plots, for example:
 
-```{r, echo=FALSE}
-plot(cars)
+
+### Background
+
+Using devices such as Jawbone Up, Nike FuelBand, and Fitbit it is now possible to collect a large amount of data about personal activity relatively inexpensively. These type of devices are part of the quantified self movement – a group of enthusiasts who take measurements about themselves regularly to improve their health, to find patterns in their behavior, or because they are tech geeks. One thing that people regularly do is quantify how much of a particular activity they do, but they rarely quantify how well they do it. In this project, your goal will be to use data from accelerometers on the belt, forearm, arm, and dumbbell of 6 participants. They were asked to perform barbell lifts correctly and incorrectly in 5 different ways. More information is available from the website here: <http://groupware.les.inf.puc-rio.br/har> (see the section on the Weight Lifting Exercise Dataset). 
+
+### Data 
+
+
+The training data for this project are available here: 
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv>  
+
+The test data are available here: 
+<https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv>
+
+The data for this project come from this source: <http://groupware.les.inf.puc-rio.br/har>. If you use the document you create for this class for any purpose please cite them as they have been very generous in allowing their data to be used for this kind of assignment. 
+
+### What you should submit
+
+The goal of your project is to predict the manner in which they did the exercise. This is the "classe" variable in the training set. You may use any of the other variables to predict with. You should create a report describing how you built your model, how you used cross validation, what you think the expected out of sample error is, and why you made the choices you did. You will also use your prediction model to predict 20 different test cases. 
+
+1. Your submission should consist of a link to a Github repo with your R markdown and compiled HTML file describing your analysis. Please constrain the text of the writeup to < 2000 words and the number of figures to be less than 5. It will make it easier for the graders if you submit a repo with a gh-pages branch so the HTML page can be viewed online (and you always want to make it easy on graders :-).
+2. You should also apply your machine learning algorithm to the 20 test cases available in the test data above. Please submit your predictions in appropriate format to the programming assignment for automated grading. See the programming assignment for additional details. 
+
+### Reproducibility 
+
+Due to security concerns with the exchange of R code, your code will not be run during the evaluation by your classmates. Please be sure that if they download the repo, they will be able to view the compiled HTML version of your analysis. 
+
+### Downloading the data
+
+We first of all download the data from the given links and store the files to a local folder. There are two files to download, one for the training data set and the testing data set. We will download both, but will only use the training data set for the model building, and the testing data set is only used during the submission phase.  
+
+
+```{r downloading, cache=TRUE}
+# Downloading the data
+if(!file.exists("data")){
+        dir.create("data")
+}
+trainUrl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testUrl<-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+if(!file.exists("data/train.csv")){
+        download.file(trainUrl, destfile="./data/train.csv", method="auto")
+}
+if(!file.exists("data/test.csv")){
+        download.file(testUrl, destfile="./data/test.csv", method="auto")
+}
+dateDownloaded<-date()
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+### Loading the data
+
+We load the two downloaded files in an R session, using the parameter `na.strings` in order to tell R to treat cells in the data frame that are empty or contain the string `NA` as missing values.
+
+```{r loading, cache=TRUE}
+# loading the data
+data<-read.csv("./data/train.csv", , na.strings = c("NA", ""))
+final_test<-read.csv("./data/test.csv", na.strings = c("NA", ""))
+```
+
+The  `final_test` data.frame will be set aside for the time being and will only be used during the submission phase.
+
+
+### Exploring the data
+
+Let us take a quick look at our training data set. 
+
+```{r exploratory}
+# Exploring the data
+dim(data)
+summary(data$classe)
+```
+ There are `r dim(data)[1]` observations and `r dim(data)[2]` variables in the data set and in this output we can also see the classification of the prediction variable of the training data set. The variable that we will try to predict is the last one in the data frame and is called `classe`
+ 
+
+### Creating Cross Validation partitions
+
+Our analysis will be based on the `data` data set, so we will split this data set into a training set and a testing set for the model building purposes. The training set will be used for training a model based on our analysis in the following steps, and then this given model will be tested using the testing set from the initial  `data` set . This will be our cross-validation method, we will use 70 of the `data` set for training and the rest 30% for testing the model created.
+
+```{r crossvalidation, cache=TRUE}
+# Cross Validation
+set.seed(0)
+inTrain = createDataPartition(y=data$classe, p=0.7, list=FALSE)
+training = data[inTrain,]
+testing = data[-inTrain,]
+dim(training);dim(testing)
+```
+
+
+
+### Cleaning data from unnecessary variables
+
+As we can see with the following command there are 100 variables in the data set that have a lot of missing values, actually more than `r round(13460/19622, 2)*100`% of their total observations are missing. We consider these variables as useless ad will omit them in the following steps.  
+There are also some variables in the beginning of the data frame that contain information about the user, the time stamp, the row name, that have nothing to offer, so they will also be omitted.
+
+```{r cleaning data, cache=FALSE}
+# Checking values with NAs
+missingvals = sapply(training, function(x) {sum(is.na(x))})
+table(missingvals)
+# We must filter them out from all dataframes.
+tbexcluded<- names(missingvals[missingvals !=0])
+training = training[, !names(training) %in% tbexcluded]
+testing = testing[, !names(testing) %in% tbexcluded]
+#str(training)
+# Clearing variables with not much sense like time stamps, usernames now names etc
+training = training[, - c(1:7)]
+testing = testing[, - c(1:7)]
+dim(training)
+```
+
+
+### Principal Components analysis
+
+The last piece of output showed that after the cleaning procedure, there are still `r dim(training)[2]` variables  in the `training` dataframe, which is still too many. We will "preprocess" the data frame using the Prncipal components analysis, as we desperately need the dimensions of the problem to be reduced. We will set the threshold to be 95%, as we do not want to lose more than 5% of the information.
+
+```{r pca, cache=TRUE}
+# Principal COmponents
+preProc <- preProcess(training[,-53],method="pca",thresh = 0.95)
+preProc
+```
+The procedure of the Principal Coponents finds correllations among the variables, and tries to replace the correllated variables with new ones that are actually transformations of the original ones. The newones are called Principal components, they are uncorellated, and we have assigned R to chose as many as they are needed so as to explain still 95% of the original variation. The above piece of output states that 25 Principal Components were needed to fulfil this condition. We believe that the principal components analysis was quite effective as it reduced the dimensions of the problem from 52 variables to 25 components.   
+
+We will now impelent the PCA results to our data set, and replace the old variables with the new components, using the following code.
+
+```{r pca implementation, cache=TRUE}
+# Forget about initial variables, we now use the Principal Components. (25)
+trainTransformed <- predict(preProc, training[,-53])
+testTransformed <- predict(preProc, testing[,-53])
+dim(trainTransformed)
+```
+
+### Random Forest Classification
+
+Our analysis and model building will proceed using the new PCA transformed training data set. We will now apply a Random Forest model on our data set. This will create a random forest prediction method, which will be our model for our tests.
+
+```{r random forest, cache=FALSE, results='hide'}
+# Random Forest
+
+modelFit <- randomForest(trainTransformed,training$classe, do.trace = FALSE)
+modelFit
+
+```
+
+### Confusion Matrix
+
+We will now put out prediction model to the  semi-final test, to see how well we can predict the `classe` variable in the `testing` data set 
+
+```{r confusion matrx, cache=TRUE}
+##Confusion Matrix 
+predicts<-predict(modelFit,testTransformed)
+confusionMatrix(testing$classe,predicts)
+```
+
+### Accuracy Metrics 
+
+As shown in the above output chunk, our model has pretty good predictive accuracy of the `classe` variable. The accuracy is `r round(0.9784*100,2)`%, so subsequently the out of sample error is expected to be `r round((1-0.9784*100),2)`%
+
+
+### Accuracy Metrics 
+
+### Submission of predictions
+
+The moment of truth for our model is the final tests. Belo is the code for preparing the `final test` data set for entering the prediction function, remember we had some cleaning done to the training data set as well as the Principal Components Transformations. When this processing is done,  the `final_final_test` data frame is inputted in the prediction fuction, a vector of predictions is created, and then the vector is inputted to the custom built function for the Coursera Project Submission. 
+
+```{r submission, cache=TRUE}
+###################################
+#######  Submission  ##############
+###################################
+
+# Clean the test data
+final_test = final_test[, !names(final_test) %in% tbexcluded]
+dim(final_test)
+final_test = final_test[, - c(1:7)]
+dim(final_test)
+final_final_test <- predict(preProc, final_test[,-53])
+
+answers <- predict(modelFit,final_final_test)
+submission<-as.character(answers)
+
+pml_write_files = function(x){
+        n = length(x)
+        for(i in 1:n){
+                filename = paste0("problem_id_",i,".txt")
+                write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+        }
+}
+
+# pml_write_files(submission)
+submission
+
+```
+
+Coursera feedback showed 95% success in the predictions (19/20). Well done to us!

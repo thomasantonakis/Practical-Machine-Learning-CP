@@ -1,13 +1,8 @@
 # Libraries
 library(caret)
-library(ggplot2)
-library(rattle)
-library(rpart)
-library(rpart.plot)
 library(randomForest)
 
 # Downloading the data
-
 if(!file.exists("data")){
         dir.create("data")
 }
@@ -22,13 +17,10 @@ if(!file.exists("data/test.csv")){
 dateDownloaded<-date()
 
 # loading the data
-
-
 data<-read.csv("./data/train.csv", , na.strings = c("NA", ""))
 final_test<-read.csv("./data/test.csv", na.strings = c("NA", ""))
 
 # Exploring the data
-
 str(data)
 names(data)
 summary(data$classe)
@@ -78,14 +70,11 @@ predicts<-predict(modelFit,testTransformed)
 confusionMatrix(testing$classe,predicts)
 
 
-
-
-
 ###################################
 #######  Submission  ##############
 ###################################
 
-answers = rep("A", 20)
+# Clean the test data
 final_test = final_test[, !names(final_test) %in% tbexcluded]
 dim(final_test)
 final_test = final_test[, - c(1:7)]
