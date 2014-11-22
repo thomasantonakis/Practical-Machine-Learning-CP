@@ -1,3 +1,11 @@
+# Libraries
+library(caret)
+library(ggplot2)
+library(rattle)
+library(rpart)
+library(rpart.plot)
+library(randomForest)
+
 # Downloading the data
 
 if(!file.exists("data")){
@@ -16,22 +24,61 @@ dateDownloaded<-date()
 # loading the data
 
 
-training<-read.csv("./data/train.csv")
-testing<-read.csv("./data/test.csv")
+data<-read.csv("./data/train.csv", , na.strings = c("NA", ""))
+final_test<-read.csv("./data/test.csv", na.strings = c("NA", ""))
 
 # Exploring the data
-library(ggplot2)
 
+str(data)
+names(data)
+summary(data$classe)
+
+
+# Cross Validation
+set.seed(0)
+inTrain = createDataPartition(y=data$classe, p=0.7, list=FALSE)
+training = data[inTrain,]
+testing = data[-inTrain,]
+dim(training);dim(testing)
+
+# Clearing out variables with too many missing values.
+missingvals = sapply(training, function(x) {sum(is.na(x))})
+table(missingvals)
+# 100 columns have 13767 missing values, we must filter them out from all dataframes.
+tbexcluded<- names(missingvals[missingvals !=0])
+training = training[, !names(training) %in% tbexcluded]
+testing = testing[, !names(testing) %in% tbexcluded]
+# final_test = final_test[, !names(final_test) %in% tbexcluded]
 str(training)
-names(training)
 
-# Model Building
-library(caret)
+# Clearing variables with not much sense like time stamps, usernames now names etc
+training = training[, - c(1:7)]
+testing = testing[, - c(1:7)]
+
+# Still 53 variables, let's do PCA
+dim(training)
+
+# Model Building 
+
+# Principal COmponents
+preProc <- preProcess(training[,-53],method="pca",thresh = 0.95)
+preProc
+
+# Forget about initial variables, we now use the Principal Components. (25)
+trainTransformed <- predict(preProc, training[,-53])
+testTransformed <- predict(preProc, testing[,-53])
+dim(trainTransformed)
+
+# Random Forest
+#modelFit <- train(training$classe ~ ., data = trainTransformed, method="rf")
+modelFit <- randomForest(trainTransformed,training$classe, do.trace = TRUE)
+modelFit
+##Accuracy 
+predicts<-predict(modelFit,testTransformed)
+confusionMatrix(testing$classe,predicts)
 
 
-preProc <- preProcess(training[,-160],method="pca",data = training)
-trainPC <- predict(preProc,training[,-160])
-modelFit <- train(training$classe ~ .,method="glm",data = training)
+
 
 
 ###################################
@@ -39,7 +86,14 @@ modelFit <- train(training$classe ~ .,method="glm",data = training)
 ###################################
 
 answers = rep("A", 20)
+final_test = final_test[, !names(final_test) %in% tbexcluded]
+dim(final_test)
+final_test = final_test[, - c(1:7)]
+dim(final_test)
+final_final_test <- predict(preProc, final_test[,-53])
 
+answers <- predict(modelFit,final_final_test)
+submission<-as.character(answers)
 
 pml_write_files = function(x){
         n = length(x)
@@ -49,4 +103,4 @@ pml_write_files = function(x){
         }
 }
 
-pml_write_files(answers)
+pml_write_files(submission)
