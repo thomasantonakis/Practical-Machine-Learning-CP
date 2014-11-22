@@ -164,7 +164,7 @@ confusionMatrix(testing$classe,predicts)
 
 ### Accuracy Metrics 
 
-As shown in the above output chunk, our model has pretty good predictive accuracy of the `classe` variable. The accuracy is `r round(0.9784*100,2)`%, so subsequently the out of sample error is expected to be `r round((1-0.9784*100),2)`%
+As shown in the above output chunk, our model has pretty good predictive accuracy of the `classe` variable. The accuracy is `r round(0.9784*100,2)`%, so subsequently the out of sample error is expected to be `r round(((1-0.9784)*100),2)`%
 
 
 ### Accuracy Metrics 
